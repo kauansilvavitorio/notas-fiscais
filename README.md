@@ -8,15 +8,37 @@
   <script>
     let servicoId = 1;
 
+    function formatarValor(valor) {
+      return valor.replace(/[^\d,]/g, '').replace(',', '.');
+    }
+
     window.adicionarServico = function () {
       const container = document.getElementById('servicos');
       const div = document.createElement('div');
       div.className = 'flex flex-col md:flex-row gap-2 mb-2';
       div.innerHTML = `
         <input type="text" placeholder="Descrição do serviço" class="descricao border p-2 rounded w-full md:w-2/3" required>
-        <input type="number" placeholder="Valor (R$)" class="valor border p-2 rounded w-full md:w-1/3" required>
+        <input type="text" placeholder="Valor (R$)" class="valor border p-2 rounded w-full md:w-1/3" required>
+        <button onclick="removerServico(this)" class="text-red-500">Remover</button>
       `;
       container.appendChild(div);
+    }
+
+    window.removerServico = function (botao) {
+      botao.parentElement.remove();
+      atualizarTotal();
+    }
+
+    window.atualizarTotal = function () {
+      const valores = document.querySelectorAll('.valor');
+      let total = 0;
+      
+      valores.forEach(input => {
+        const valor = parseFloat(formatarValor(input.value));
+        if (!isNaN(valor)) total += valor;
+      });
+
+      document.getElementById('total').textContent = `Total: R$ ${total.toFixed(2)}`;
     }
 
     window.gerarPDF = async function () {
@@ -52,6 +74,32 @@
 
       doc.save(`nota_servico_${nome.replace(/\s+/g, '_')}.pdf`);
     }
+
+    window.gerarCSV = function () {
+      const nome = document.getElementById('nome').value;
+      const data = document.getElementById('data').value;
+      const descricoes = document.querySelectorAll('.descricao');
+      const valores = document.querySelectorAll('.valor');
+
+      let csvContent = 'Nome,Data,Descrição do Serviço,Valor (R$)\n';
+
+      let total = 0;
+
+      descricoes.forEach((desc, i) => {
+        const descricao = desc.value;
+        const valor = parseFloat(formatarValor(valores[i].value)).toFixed(2);
+        csvContent += `${nome},${data},${descricao},${valor}\n`;
+        total += parseFloat(valores[i].value);
+      });
+
+      csvContent += `\nTotal,,${total.toFixed(2)}`;
+
+      const link = document.createElement('a');
+      link.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csvContent);
+      link.target = '_blank';
+      link.download = `nota_servico_${nome.replace(/\s+/g, '_')}.csv`;
+      link.click();
+    }
   </script>
   <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
 </head>
@@ -77,8 +125,11 @@
       <button onclick="adicionarServico()" class="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded">+ Adicionar Serviço</button>
     </div>
 
+    <div id="total" class="text-center text-xl font-semibold mb-4">Total: R$ 0,00</div>
+
     <div class="text-center">
       <button onclick="gerarPDF()" class="bg-green-600 hover:bg-green-700 text-white font-semibold text-lg px-6 py-3 rounded-lg shadow-md">Gerar PDF</button>
+      <button onclick="gerarCSV()" class="ml-4 bg-yellow-600 hover:bg-yellow-700 text-white font-semibold text-lg px-6 py-3 rounded-lg shadow-md">Gerar CSV</button>
     </div>
   </div>
 </body>
